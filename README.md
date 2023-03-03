@@ -4,7 +4,8 @@
 </p>
 <p align="center"> Image courtesy of Stable Diffusion 2.1 </p>
 <hr>
-This repo is the code for Baseline fact Extraction and VERification System (BEVERS). The pipeline utilizes standard approaches for each component in the pipeline. Despite it's simplicity, BEVERS achieves SOTA performance on FEVER (leaderboard) and achieves the highest label accuracy F1 score on SciFact (leaderboard). 
+
+This repo is the code for Baseline fact Extraction and VERification System (BEVERS). The pipeline utilizes standard approaches for each component in the pipeline. Despite it's simplicity, BEVERS achieves SOTA performance on FEVER ([old leaderboard](https://competitions.codalab.org/competitions/18814#results), [new leaderboard](https://codalab.lisn.upsaclay.fr/competitions/7308#results)) and achieves the highest label accuracy F1 score on SciFact ([leaderboard](https://leaderboard.allenai.org/scifact/submissions/public)). 
 
 ## Requirements
 - conda
@@ -53,7 +54,7 @@ bash run_scifact.sh
 ## Todos
 - [ ] Release models (still figuring out best way for this, may just use HuggingFace model hub)
 - [ ] Finish cleaning up code (started on this but didn't finish)
-- [ ] Update demo
+- [x] Update demo - Done (03/02/23)
 - [ ] Some of the code was simply copied from the evaluation repos for ease of use. Properly document source of code that is not mine.
 
 ## Potential Todos
