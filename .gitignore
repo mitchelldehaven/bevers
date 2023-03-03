@@ -5,11 +5,9 @@
 *.pickle
 *.pkl
 *.npz
-*.html
 *.jsonl
 *.zip
 *.db
-*.json
 *.yaml
 checkpoints
 __pycache__/
@@ -17,3 +15,4 @@ __pycache__/
 *.pyc
 *.pyo
 *.jsonl
+node_modules/

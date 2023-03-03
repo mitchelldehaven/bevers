@@ -8,31 +8,26 @@ import spacy
 import sqlite_spellfix
 import torch
 from scipy import sparse
-from transformers import RobertaTokenizerFast
+from transformers import AutoTokenizer
 
 from src.data.utils import load_pickle, untokenize
+from src.models import RoBERTa
 from src.paths import DB_PATH, FEATURES_DIR, MODELS_DIR
 
 ### DEFAULTS
-TITLE_TFIDF = MODELS_DIR / "title_vectorizer.pickle"
-TITLE_TFIDFF_FEATS = (
-    -1 * sparse.load_npz(FEATURES_DIR / "tfidf" / "title_feats.npz")
-).T.tocsr()
-DOCUMENT_TFIDF = MODELS_DIR / "document_vectorizer.pickle"
-DOCUMENT_TFIDF_FEATS = (
-    -1 * sparse.load_npz(FEATURES_DIR / "tfidf" / "doc_feats.npz")
-).T.tocsr()
-SS_MODEL = (
+CONCAT_TFIDF = MODELS_DIR / "concat_vectorizer.pkl"
+CONCAT_TFIDF_FEATS = FEATURES_DIR / "tfidf" / "concat_feats.npz"
+SS_MODEL_PATH = (
     MODELS_DIR
     / "sentence_selection"
-    / "ss_roberta-large_k_20_random_expanded_epoch=00-valid_loss=0.08616.ckpt"
+    / "ss_roberta-large_binary_False_epoch=00-valid_accuracy=0.96178.ckpt"
 )
-CC_MODEL = (
+CC_MODEL_PATH = (
     MODELS_DIR
     / "claim_classification"
-    / "cc_roberta_concat_epoch=00-valid_loss=0.68141.ckpt"
+    / "cc_roberta-large-mnli_concat_epoch=01-valid_accuracy=0.80748.ckpt"
 )
-AGGREGATOR_MODEL = None
+MODEL_TYPE = "roberta-large-mnli"
 
 
 def strip_bad_stopwords(entity):
@@ -93,34 +88,31 @@ class FeverModel:
     def __init__(
         self,
         db_path=DB_PATH,
-        title_tfidf_path=TITLE_TFIDF,
-        document_tfidf_path=DOCUMENT_TFIDF,
-        title_tfidf_feats=TITLE_TFIDFF_FEATS,
-        document_tfidf_feats=DOCUMENT_TFIDF_FEATS,
-        ss_model_path=SS_MODEL,
-        cc_model_path=CC_MODEL,
-        aggregator_path=AGGREGATOR_MODEL,
-        device="cpu",
-        dtype=torch.bfloat16,
+        cat_tfidf_path=CONCAT_TFIDF,
+        cat_tfidf_feats_path=CONCAT_TFIDF_FEATS,
+        model_type=MODEL_TYPE,
+        ss_model_path=SS_MODEL_PATH,
+        cc_model_path=CC_MODEL_PATH,
+        device="cuda",
+        dtype=torch.float16,
         batch_size=4,
     ):
         self.db_path = db_path
         self.conn = self.__init_db__()
-        self.title_tfidf_path = title_tfidf_path
-        self.title_tfidf = load_pickle(title_tfidf_path)
-        self.document_tfidf_path = document_tfidf_path
-        self.document_tfidf = load_pickle(document_tfidf_path)
-        self.title_feats = title_tfidf_feats
-        self.doc_feats = document_tfidf_feats.T.tocsr()
+        self.concat_tfidf_path = cat_tfidf_path
+        self.concat_tfidf = load_pickle(cat_tfidf_path)
+        self.concat_tfidf_feats_path = cat_tfidf_feats_path
+        self.concat_feats = (-1 * sparse.load_npz(cat_tfidf_feats_path).T.tocsr())
         self.device = device
         self.dtype = dtype
         self.batch_size = batch_size
+        self.model_type = model_type
         self.ss_model_path = ss_model_path
-        self.ss_model = self.load_model(SS_RoBERTa, ss_model_path)
         self.cc_model_path = cc_model_path
-        self.cc_model = self.load_model(CC_RoBERTa, cc_model_path)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_type)
+        self.ss_model = self.load_model(self.model_type, ss_model_path, self.tokenizer)
+        self.cc_model = self.load_model(self.model_type, cc_model_path, self.tokenizer)
         self.nlp = spacy.load("en_core_web_trf")
-        self.tokenizer = RobertaTokenizerFast.from_pretrained("roberta-large")
 
     def __init_db__(self):
         conn = sqlite3.connect(self.db_path, check_same_thread=False)
@@ -128,22 +120,25 @@ class FeverModel:
         conn.load_extension(sqlite_spellfix.extension_path())
         return conn
 
-    def load_model(self, model_type, model_path):
+    def load_model(self, model_type, model_path, tokenizer=None):
         ckpt_state_dict = torch.load(
             model_path, map_location=torch.device(self.device)
         )["state_dict"]
-        model = model_type("roberta-large", 3)
+        model = RoBERTa(model_type, 3, tokenizer=tokenizer)
         if "roberta.loss_fct.weight" in ckpt_state_dict:
             del ckpt_state_dict["roberta.loss_fct.weight"]
-        model.load_state_dict(ckpt_state_dict)
+        try:
+            model.load_state_dict(ckpt_state_dict)
+        except Exception:
+            model.expand_embeddings()
+            model.load_state_dict(ckpt_state_dict)
+        model.to(self.device, dtype=self.dtype)
         model.eval()
         return model
 
     def retrieve_docs(self, claim, k):
-        claim_title_feats = self.title_tfidf.transform([claim])
-        self.document_tfidf.transform(claim)
-        top_title_docs = self.get_topk_docs(claim_title_feats, self.title_feats, k)
-        self.get_topk_docs(claim_doc_feats, self.doc_feats, k)
+        claim_feats = self.concat_tfidf.transform([claim])
+        top_title_docs = self.get_topk_docs(claim_feats, self.concat_feats, k)
         expanded_ids = expand_documents(self.nlp, claim, self.conn)
         return set(top_title_docs + expanded_ids)
 
@@ -175,7 +170,7 @@ class FeverModel:
     def get_topk_sentences(self, claim, sentences, ids, k=5):
         all_preds = []
         i = 0
-        with torch.no_grad():
+        with torch.no_grad(), torch.cuda.amp.autocast(enabled=True):
             while i < len(sentences):
                 batch_sentences = sentences[i : i + self.batch_size]
                 batch_inputs = [
@@ -188,6 +183,7 @@ class FeverModel:
                     return_tensors="pt",
                     max_length=256,
                 )
+                batch_input_ids  = {k: v.to('cuda') for k, v in batch_input_ids.items()}
                 preds = self.ss_model(batch_input_ids).logits.float().detach().cpu()
                 del batch_input_ids
                 all_preds += [preds]
@@ -205,16 +201,17 @@ class FeverModel:
 
     def predict_claim_with_sentences(self, claim, topk_sentences):
         formatted_evidence = " </s></s> ".join(
-            [page_name + " -- " + line for page_name, line in topk_sentences[:2]]
+            [page_name + " -- " + untokenize(line) for page_name, line in topk_sentences]
         )
-        tokenized_inputs = self.tokenizer(
-            [(claim, formatted_evidence)],
-            padding=True,
-            truncation=True,
-            return_tensors="pt",
-            max_length=368,
-        )
-        with torch.no_grad():
+        with torch.no_grad(), torch.cuda.amp.autocast(enabled=True):
+            tokenized_inputs = self.tokenizer(
+                [(formatted_evidence, claim)],
+                padding=True,
+                truncation=True,
+                return_tensors="pt",
+                max_length=368,
+            )
+            tokenized_inputs  = {k: v.to('cuda') for k, v in tokenized_inputs.items()}
             pred = self.cc_model(tokenized_inputs).logits.detach().float().cpu()
             softmax_pred = torch.nn.functional.softmax(pred, dim=1)
         return softmax_pred

@@ -1,0 +1,11 @@
+<div class="container-sm" style="max-width: 45em;">
+    <hr/>
+    <h5>{{title}}</h5>
+    <div *ngIf="image_url">
+        <img [src]="image_url" width=120 height=auto>
+        <br>
+    </div>
+    <br>
+    <p class="text-wrap">{{line}}</p>
+    <p>Retrieval Score {{score}}</p>
+</div>

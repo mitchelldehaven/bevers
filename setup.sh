@@ -4,6 +4,7 @@ conda activate bevers
 yes | conda install pytorch==1.13.1 torchvision torchaudio pytorch-cuda=11.6 -c pytorch -c nvidia
 pip install -r requirements.txt
 python -m spacy download en_core_web_trf
+python -m spacy download en_core_web_sm
 # for fuzzy string search
 sudo apt-get install libsqlite3-dev
 pip install git+https://github.com/karlb/sqlite-spellfix

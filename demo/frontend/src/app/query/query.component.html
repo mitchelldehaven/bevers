@@ -1,0 +1,43 @@
+<!-- <div class="col-xs-2 text-center">
+    <br>
+</div> -->
+<div class="col text-center">
+    <input class="col-5 form-control-lg text-center" [(ngModel)]="claim" type="text">
+    <br><br>
+    <button class="btn btn-success" type="button" (click)="verify();">Verify</button>
+    <span class="px-2"></span>
+    <button class="btn btn-warning mr-5" (click)="reset()" type="button">Reset</button>
+    <br><br>
+    <div *ngIf="querying">
+        <div class="loading">{{get_loading_status()}}</div>
+    </div>
+    <br>
+    <div *ngIf="prediction">
+        <h3>Prediction</h3>
+        <span class="badge bg-danger large-badge">{{prediction_vector[0].toFixed(4)}}</span>
+        <span class="px-1"></span>
+        <span class="badge bg-secondary large-badge">{{prediction_vector[1].toFixed(4)}}</span>
+        <span class="px-1"></span>
+        <span class="badge bg-success large-badge">{{prediction_vector[2].toFixed(4)}}</span>
+        <br><br>
+        <div *ngIf="prediction === 'REFUTES'">
+            <div class="badge bg-danger large-badge">REFUTES</div>
+        </div>
+        <div *ngIf="prediction === 'NOT ENOUGH INFO'">
+            <div class="badge bg-secondary large-badge">NOT ENOUGH INFO</div>
+        </div>
+        <div *ngIf="prediction === 'SUPPORTS'">
+            <div class="badge bg-success large-badge">SUPPORTS</div>
+        </div>
+    </div>
+
+    <br><br>
+    <div *ngIf="prediction">
+        <h3>Evidence</h3>
+        <div *ngFor="let evidence of top5_evidence">
+            <div *ngIf="evidence.title">
+                <app-evidence [title]="evidence.title" [line]="evidence.line" [score]="evidence.score"></app-evidence>
+            </div>
+        </div>
+    </div>
+</div>

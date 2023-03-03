@@ -3,6 +3,7 @@ Script for training gradient boosting classifier via XGBoost.
 Expects that previous pipeline steps have been ran.
 """
 import argparse
+from pathlib import Path
 import numpy as np
 from sklearn.model_selection import GridSearchCV
 from xgboost import XGBClassifier
@@ -36,7 +37,7 @@ elif DATASET == "scifact":
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--claim_scores_file", type=Path)
+    parser.add_argument("--claim_scores_file", type=Path, default="combined_claim_scores.npy")
     args = parser.parse_args()
     return args
 
