@@ -76,3 +76,26 @@ In my initial code clean up I changed a decent amount of code and prior to relea
 | --- | :-------: | :--------------------: |
 | [Published](https://leaderboard.allenai.org/scifact/submission/ccpr8fq1igkl24rohk20)| 58.1  | 73.2|
 | [Regression](https://leaderboard.allenai.org/scifact/submission/cfttsdq3t1q51grt1e90) (02/26/23) | 58.3 | 73.8|
+
+
+## Demo
+There is a simple UI for demoing the model. The current setup is a lighter version of what was used in for the best results for reducing compute requriement. 
+### Backend
+For running the backend Flask API:
+```
+export DATASET=fever
+export PYTHONPATH=.
+python demo/src/app.py
+```
+
+### Frontend
+```
+cd demo/frontend
+npm i
+ng serve
+```
+There is a simple gif showing the demo below in order to avoid having to setup the demo to see what it does.
+
+<p align="center">
+  <img src='fever_demo.gif' width='800' />
+</p>
