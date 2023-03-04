@@ -1,5 +1,6 @@
 black==22.12.0
 Cython==0.29.24
+faiss-gpu==1.7.1
 flake8==2.3.0
 flask-cors==3.0.10
 flask==2.0.2
@@ -9,5 +10,6 @@ pyyaml==6.0
 ray==1.12.1
 ray-lightning==0.3.0
 sentence-transformers==2.1.0
+setuptools==59.5.0
 spacy==3.2.0
 xgboost==1.5.2
