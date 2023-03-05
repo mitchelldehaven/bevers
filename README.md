@@ -52,14 +52,14 @@ bash run_scifact.sh
 |Ours | 58.1  | **73.2**|
 
 ## Todos
-- [ ] Release models (still figuring out best way for this, may just use HuggingFace model hub)
+- [x] Release models - Done via Docker image (03/05/23)
 - [ ] Finish cleaning up code (started on this but didn't finish)
 - [x] Update demo - Done (03/02/23)
 - [ ] Some of the code was simply copied from the evaluation repos for ease of use. Properly document source of code that is not mine.
 
 ## Potential Todos
 - [ ] Improve retrieval for SciFact utilizing neural re-rankers like most other systems do.
-- [ ] Release easy to use predictions for sentence selection. This helps people who only want to focus on the claim classification portion of task.
+- [x] Release easy to use predictions for sentence selection. This helps people who only want to focus on the claim classification portion of task. - Done via Docker image (03/05/23)
 
 ## Regression Tests
 In my initial code clean up I changed a decent amount of code and prior to release I wanted to make sure the results were replicable, so I ran regression tests for FEVER and SciFact.
@@ -76,6 +76,27 @@ In my initial code clean up I changed a decent amount of code and prior to relea
 | --- | :-------: | :--------------------: |
 | [Published](https://leaderboard.allenai.org/scifact/submission/ccpr8fq1igkl24rohk20)| 58.1  | 73.2|
 | [Regression](https://leaderboard.allenai.org/scifact/submission/cfttsdq3t1q51grt1e90) (02/26/23) | 58.3 | 73.8|
+
+## Docker Images
+As an means of distributing the system, BEVERS is made available as a Docker image
+
+- BEVERS: `docker pull mitchelldehaven/bevers`
+- BEVERS frontend: `docker pull mitchelldehaven/bevers_frontend`
+
+For running the demo, the following must be done for the backend Flask API:
+```
+docker run -p 5000:5000 -it --gpus all mitchelldehaven/bevers
+conda activate bevers
+export DATASET=fever
+export PYTHONPATH=.
+export FLASK_APP=demo/backend/app.py
+flask run --host=0.0.0.0
+```
+For running the demo, the follwing must be done for the frontend Angular UI:
+```
+docker run -p 4200:4200 -it mitchelldehaven/bevers_frontend
+```
+After both docker images are running, the demo is accessible by visiting `http://localhost:4200/`.
 
 
 ## Demo
