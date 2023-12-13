@@ -7,7 +7,7 @@ export DATASET=fever
 
 # activate conda environment
 eval "$(conda shell.bash hook)"
-conda activate bevers_v2
+conda activate bevers
 
 # prep directories for FEVER
 python src/paths.py
